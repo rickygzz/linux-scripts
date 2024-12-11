@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Install required dependencies
+# sudo dnf install -y curl unzip fonts-powerline
+
+curl -s https://ohmyposh.dev/install.sh | bash -s
+# curl -s https://ohmyposh.dev/install.sh | bash -s -- -d ~/bin ~/.local/bin
+
+{
+    echo 'export PATH=$PATH:~/.local/bin'
+    echo 'eval "$(oh-my-posh init bash)"'
+} >> ~/.bashrc
+
+# Reload .bashrc to apply changes
+source ~/.bashrc
+
+# Optional: Install a font for best visual experience. 'GeistMono Nerd Font Mono'
+# https://www.nerdfonts.com/font-downloads
+oh-my-posh font install
+
+echo "Oh My Posh installation and configuration complete!"

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Append alias only if it does not already exist
+alias_string='alias ll="ls -lsa"'
+grep -qxF "$alias_string" ~/.bashrc || echo "$alias_string" >> ~/.bashrc
+
+source ~/.bashrc
+
+echo "Alias created successfully! Use 'll' to run 'ls -lsa'."
