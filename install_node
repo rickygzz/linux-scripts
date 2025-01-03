@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Install required dependencies
+sudo dnf install -y curl
+
+# Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/refs/heads/master/install.sh | bash
+
+# Load nvm
+source ~/.bashrc
+# export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
+# Install the latest LTS version of Node.js
+nvm install --lts
+nvm use node
+
+# Verify the installation
+node -v
+npm -v
+npx -v
+nvm -v
+
+echo "Node.js, npm and nvm have been successfully installed."

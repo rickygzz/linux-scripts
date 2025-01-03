@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Add Google Chrome repository
+sudo sh -c 'echo -e "[google-chrome]\nname=Google Chrome\nbaseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64\nenabled=1\ngpgcheck=1\ngpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub" > /etc/yum.repos.d/google-chrome.repo'
+
+# Update package list
+sudo dnf check-update
+
+# Install Google Chrome
+sudo dnf install -y google-chrome-stable
+
+# Confirm installation
+if command -v google-chrome > /dev/null 2>&1; then
+    echo "Google Chrome has been successfully installed."
+else
+    echo "There was an error installing Google Chrome."
+fi
+
