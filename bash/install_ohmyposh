@@ -6,16 +6,32 @@
 curl -s https://ohmyposh.dev/install.sh | bash -s
 # curl -s https://ohmyposh.dev/install.sh | bash -s -- -d ~/bin ~/.local/bin
 
-{
-    echo 'export PATH=$PATH:~/.local/bin'
-    echo 'eval "$(oh-my-posh init bash)"'
-} >> ~/.bashrc
-
-# Reload .bashrc to apply changes
-source ~/.bashrc
-
 # Optional: Install a font for best visual experience. 'GeistMono Nerd Font Mono'
 # https://www.nerdfonts.com/font-downloads
 oh-my-posh font install
+
+# URL of the file to download
+FILE_URL="https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/refs/heads/main/themes/atomic.omp.json"
+# Download the file
+curl -o "~/atomic.omp.json" $FILE_URL
+# Check if the download was successful
+if [ -f "~/atomic.omp.json" ]; then
+    echo "File downloaded successfully to ~/atomic.omp.json"
+
+    {
+        echo 'export PATH=$PATH:~/.local/bin'
+        echo 'eval "$(oh-my-posh init bash --config ~/atomic.omp.json)"'
+    } >> ~/.bashrc
+else
+    echo "Failed to download the file in ~/atomic.omp.json."
+
+    {
+        echo 'export PATH=$PATH:~/.local/bin'
+        echo 'eval "$(oh-my-posh init bash)"'
+    } >> ~/.bashrc
+fi
+
+# Reload .bashrc to apply changes
+source ~/.bashrc
 
 echo "Oh My Posh installation and configuration complete!"
