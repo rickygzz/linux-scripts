@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Update package index
+sudo dnf update -y
+
+# Install MySQL
+sudo dnf install -y mysql-server
+
+# Start MySQL service
+sudo systemctl start mysqld
+
+# Enable MySQL service to start on boot
+sudo systemctl enable mysqld
+
+# Secure MySQL installation (optional, requires user input)
+sudo mysql_secure_installation
+
+# Print MySQL service status
+sudo systemctl status mysqld
+
+echo "MySQL installation and initial setup completed."
