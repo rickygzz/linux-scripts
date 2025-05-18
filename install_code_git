@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e
+
+if command -v dnf >/dev/null 2>&1; then
+    # Rocky Linux (dnf)
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
+    sudo dnf check-update
+    sudo dnf install -y code git
+elif command -v apt >/dev/null 2>&1; then
+    # Ubuntu (apt)
+    sudo apt update
+    sudo apt install -y wget gpg
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+    sudo install -o root -g root -m 644 microsoft.gpg /etc/apt/trusted.gpg.d/
+    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
+    sudo apt update
+    sudo apt install -y code git
+    rm -f microsoft.gpg
+else
+    echo "Neither dnf nor apt found. Unsupported system."
+    exit 1
+fi
+
+# Confirm installation
+if command -v code > /dev/null 2>&1; then
+    echo "Visual Studio Code has been successfully installed."
+else
+    echo "There was an error installing Visual Studio Code."
+fi
