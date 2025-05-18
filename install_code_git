@@ -23,6 +23,10 @@ else
     exit 1
 fi
 
+git config --global user.name "Ricardo Gonzalez"
+git config --global user.email "ricardo@linux.local"
+git config --global push.autoSetupRemote true
+
 # Confirm installation
 if command -v code > /dev/null 2>&1; then
     echo "Visual Studio Code has been successfully installed."

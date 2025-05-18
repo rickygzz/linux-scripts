@@ -1,34 +1,41 @@
 #!/bin/bash
 
-# Install required dependencies
-# sudo dnf install -y curl unzip fonts-powerline
+set -e
 
-curl -s https://ohmyposh.dev/install.sh | bash -s
-# curl -s https://ohmyposh.dev/install.sh | bash -s -- -d ~/bin ~/.local/bin
+if command -v dnf >/dev/null 2>&1; then
+    # Install required dependencies
+    sudo dnf check-update
+    sudo dnf install -y curl unzip
+    # sudo dnf fonts-powerline
+    curl -s https://ohmyposh.dev/install.sh | bash -s
+elif command -v apt >/dev/null 2>&1; then
+    # Install required dependencies
+    sudo apt update
+    sudo apt install -y curl unzip
+    # Install oh-my-posh to /usr/local/bin so it's already in PATH
+    sudo curl -s https://ohmyposh.dev/install.sh | sudo bash -s -- -d /usr/local/bin
+else
+    echo "Neither dnf nor apt found. Unsupported system."
+    exit 1
+fi
 
 # Optional: Install a font for best visual experience. 'GeistMono Nerd Font Mono'
 # https://www.nerdfonts.com/font-downloads
-oh-my-posh font install
+oh-my-posh font install D2Coding
 
-# URL of the file to download
-FILE_URL="https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/refs/heads/main/themes/atomic.omp.json"
-# Download the file
-curl -o "~/atomic.omp.json" $FILE_URL
-# Check if the download was successful
-if [ -f "~/atomic.omp.json" ]; then
-    echo "File downloaded successfully to ~/atomic.omp.json"
+cp rick.omp.json ~/rick.omp.json
+
+if [ -f ~/rick.omp.json ]; then
+    echo "File copied successfully to ~/rick.omp.json"
 
     {
-        echo 'export PATH=$PATH:~/.local/bin'
-        echo 'eval "$(oh-my-posh init bash --config ~/atomic.omp.json)"'
+        # echo 'export PATH=$PATH:~/.local/bin'
+        echo 'eval "$(oh-my-posh init bash --config ~/rick.omp.json)"'
     } >> ~/.bashrc
 else
-    echo "Failed to download the file in ~/atomic.omp.json."
+    echo "Failed to copy the file in ~/rick.omp.json."
 
-    {
-        echo 'export PATH=$PATH:~/.local/bin'
-        echo 'eval "$(oh-my-posh init bash)"'
-    } >> ~/.bashrc
+    exit 1
 fi
 
 # Reload .bashrc to apply changes
