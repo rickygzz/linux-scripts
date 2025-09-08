@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Script to install Phoronix Test Suite on Ubuntu
+
+set -e  # Exit immediately if a command exits with a non-zero status
+
+# Variables
+PHORONIX_VERSION="10.8.4"   # Change if a newer version is available
+PHORONIX_URL="https://phoronix-test-suite.com/releases/phoronix-test-suite-$PHORONIX_VERSION.tar.gz"
+
+echo "=== Installing Phoronix Test Suite $PHORONIX_VERSION ==="
+
+# 1. Update repositories
+if command -v dnf >/dev/null 2>&1; then
+    # Install required dependencies
+    sudo dnf check-update
+    sudo dnf install -y php-cli php-xml unzip wget tar
+elif command -v apt >/dev/null 2>&1; then
+    sudo apt update
+    sudo apt install -y php-cli php-xml unzip wget tar
+    wget -q $PHORONIX_URL -O phoronix-test-suite.tar.gz
+else
+    echo "Neither dnf nor apt found. Unsupported system."
+    exit 1
+fi
+
+# 4. Extract files
+echo "Extracting files..."
+tar -xvzf phoronix-test-suite.tar.gz
+
+# 5. Install on the system
+cd phoronix-test-suite
+echo "Installing on the system..."
+sudo ./install-sh
+
+# 6. Verify installation
+echo "Verifying installation..."
+phoronix-test-suite version
+
+echo "=== Installation completed successfully ==="
+echo "Example usage: phoronix-test-suite benchmark compress-7zip"
+
+# Recommended benchmarks to try:
+# CPU: phoronix-test-suite benchmark compress-7zip
+# GPU: phoronix-test-suite benchmark unigine-heaven
+# Full system: phoronix-test-suite benchmark pts/desktop-benchmark
