@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# === Settings you can tweak ===
+REMOTE_NAME="rickygzz_com_drive"
+MOUNT_DIR="${HOME}/GoogleDrive"
+SERVICE_NAME="rclone-gdrive.service"
+SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
+RCLONE_CONF_DIR="${HOME}/.config/rclone"
+RCLONE_CONF_FILE="${RCLONE_CONF_DIR}/rclone.conf"
+
+# Reasonable mount flags for desktop usage
+RCLONE_FLAGS=(
+    "--vfs-cache-mode" "full"
+    "--vfs-write-back" "10s"
+    "--dir-cache-time" "12h"
+    "--poll-interval" "5m"
+    "--vfs-cache-max-age" "24h"
+    "--vfs-cache-max-size" "5G"
+    "--dir-cache-time" "12h"
+    "--poll-interval" "5m"
+    "--transfers" "4"
+    "--checkers" "8"
+    "--vfs-locks"
+    "--fast-list"
+    "--umask" "022"
+    "--uid" "$(id -u)"
+    "--gid" "$(id -g)"
+)
+
+echo "🔎 Detecting package manager..."
+PKG=""
+if command -v dnf >/dev/null 2>&1; then
+    PKG="dnf"
+    echo "📦 DNF-based system detected (Fedora/RHEL/Rocky/CentOS)."
+
+    echo "🔄 Updating system..."
+    sudo dnf upgrade -y  # Automatically agree to upgrades
+
+    echo "🔄 Installing dependencies: rclone, fuse3..."
+    sudo dnf -y install rclone fuse3
+elif command -v apt >/dev/null 2>&1; then
+    PKG="apt"
+    echo "📦 APT-based system detected (Ubuntu/Debian)."
+
+    sudo apt update
+
+    echo "🔄 Installing dependencies: rclone, fuse3..."
+    sudo apt -y install rclone fuse3
+else
+    echo "❌ Neither dnf nor apt found. Unsupported system."
+    exit 1
+fi
+
+# Ensure rclone and fusermount are present
+if ! command -v rclone >/dev/null 2>&1; then
+    echo "❌ rclone not found after installation."
+    exit 1
+fi
+
+if ! command -v fusermount3 >/dev/null 2>&1 && ! command -v fusermount >/dev/null 2>&1; then
+    echo "⚠️  fusermount not found. On some systems it's provided by the fuse3 package."
+fi
+
+echo "📁 Creating mount directory at: ${MOUNT_DIR}"
+mkdir -p "${MOUNT_DIR}"
+
+echo "🗂️ Ensuring rclone config path exists: ${RCLONE_CONF_DIR}"
+mkdir -p "${RCLONE_CONF_DIR}"
+touch "${RCLONE_CONF_FILE}"
+
+# Check if the remote already exists
+echo "🔎 Checking for existing rclone remote: [${REMOTE_NAME}]"
+if rclone listremotes 2>/dev/null | grep -q "^${REMOTE_NAME}:"; then
+    echo "✅ Remote '${REMOTE_NAME}' already exists."
+else
+    echo "⚙️ Remote '${REMOTE_NAME}' not found. Launching interactive rclone config..."
+    echo "   → In the menu: choose 'n' (New remote) → name it '${REMOTE_NAME}'"
+    echo "   → For storage, pick 'drive' (Google Drive)"
+    echo "   → Accept defaults unless you want custom scopes"
+    echo "   → When asked for auth, allow rclone to open a browser and authorize your Google account"
+    echo "   → When finished, exit the config."
+    rclone config
+    # Validate again
+    if ! rclone listremotes 2>/dev/null | grep -q "^${REMOTE_NAME}:"; then
+        echo "❌ Remote '${REMOTE_NAME}' still not found. Aborting."
+        exit 1
+    fi
+    echo "✅ Remote '${REMOTE_NAME}' created."
+fi
+
+echo "🧩 Creating systemd user service to auto-mount at login..."
+mkdir -p "${SYSTEMD_USER_DIR}"
+
+SERVICE_PATH="${SYSTEMD_USER_DIR}/${SERVICE_NAME}"
+
+FUSERMOUNT_BIN="$(command -v fusermount3 || command -v fusermount || echo /usr/bin/fusermount3)"
+
+cat > "${SERVICE_PATH}" <<EOF
+[Unit]
+Description=Rclone mount for ${REMOTE_NAME} at ${MOUNT_DIR}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=RCLONE_CONFIG=${RCLONE_CONF_FILE}
+ExecStart=$(command -v rclone) mount ${REMOTE_NAME}: ${MOUNT_DIR} \\
+$(printf "  %s %s \\\n" "${RCLONE_FLAGS[@]}")
+  --log-file ${HOME}/.local/share/rclone/${REMOTE_NAME}.log \\
+  --log-level INFO
+ExecStop=${FUSERMOUNT_BIN} -u ${MOUNT_DIR}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+EOF
+
+# Some systems have fusermount at a different path/name
+if ! command -v fusermount3 >/dev/null 2>&1; then
+  # Replace ExecStop line with fusermount if fusermount3 is not available
+  sed -i 's|ExecStop=/bin/fusermount3 -u|ExecStop=/bin/fusermount -u|' "${SERVICE_PATH}" || true
+fi
+
+echo "🔐 Ensuring log directory exists: ~/.local/share/rclone"
+mkdir -p "${HOME}/.local/share/rclone"
+
+echo "🔁 Reloading systemd (user) daemon..."
+systemctl --user daemon-reload
+
+echo "⚙️ Enabling and starting service: ${SERVICE_NAME}"
+systemctl --user enable --now "${SERVICE_NAME}"
+
+# Try a quick sanity check
+sleep 2
+if mount | grep -q "on ${MOUNT_DIR} type fuse.rclone"; then
+  echo "✅ Mount active at ${MOUNT_DIR}"
+else
+  echo "⚠️ Mount not detected yet. Attempting manual start..."
+  systemctl --user restart "${SERVICE_NAME}" || true
+  sleep 2
+  if mount | grep -q "on ${MOUNT_DIR} type fuse.rclone"; then
+    echo "✅ Mount active at ${MOUNT_DIR}"
+  else
+    echo "❌ Failed to mount ${REMOTE_NAME}: at ${MOUNT_DIR}."
+    echo "   Check the logs: tail -n 200 '${HOME}/.local/share/rclone/${REMOTE_NAME}.log'"
+    exit 1
+  fi
+fi
+
+echo "🎉 All set!"
+echo "• Your Google Drive is mounted at: ${MOUNT_DIR}"
+echo "• It will auto-mount at login via systemd --user."
+echo "• To stop it now: 'systemctl --user stop ${SERVICE_NAME}'"
+echo "• To disable auto-start: 'systemctl --user disable ${SERVICE_NAME}'"

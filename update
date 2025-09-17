@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+echo "🔍 Detecting package manager..."
+
+# Detect if the system uses dnf or apt
+if command -v dnf >/dev/null 2>&1; then
+    echo "📦 DNF-based system detected (Fedora, RHEL, Rocky, CentOS)..."
+
+    echo "🔄 Updating the system with DNF..."
+    sudo dnf check-update  # Check if there are updates
+    sudo dnf upgrade -y    # Perform the upgrade without asking
+elif command -v apt >/dev/null 2>&1; then
+    echo "📦 APT-based system detected (Ubuntu, Debian)..."
+    
+    echo "🔄 Updating the system with APT..."
+    sudo apt update        # Update the package list
+    sudo apt upgrade -y    # Perform the package upgrade
+else
+    echo "❌ Neither dnf nor apt found. Unsupported system."
+    exit 1
+fi
+
+# Confirmation of the update
+echo "✅ The system has been successfully updated."

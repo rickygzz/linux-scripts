@@ -2,34 +2,65 @@
 
 set -e
 
+echo "🔍 Detecting package manager..."
+
 if command -v dnf >/dev/null 2>&1; then
-    # Rocky Linux (dnf)
+    # Rocky Linux, Fedora, RHEL (dnf)
+    echo "📦 Installing Visual Studio Code (dnf-based system)..."
+
+    # Import Microsoft GPG key
     sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
-    sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
-    sudo dnf check-update
+
+    # Add VSCode repo
+    sudo tee /etc/yum.repos.d/vscode.repo > /dev/null << EOF
+[code]
+name=Visual Studio Code
+baseurl=https://packages.microsoft.com/yumrepos/vscode
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+EOF
+
+    echo "🔄 Updating system..."
+    sudo dnf upgrade -y  # Automatically agree to upgrades
     sudo dnf install -y code git
+
 elif command -v apt >/dev/null 2>&1; then
-    # Ubuntu (apt)
+    # Ubuntu, Debian (apt)
+    echo "📦 Installing Visual Studio Code (apt-based system)..."
+
+    # Install dependencies
     sudo apt update
     sudo apt install -y wget gpg
-    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
-    sudo install -o root -g root -m 644 microsoft.gpg /etc/apt/trusted.gpg.d/
-    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
+
+    # Download and install the GPG key
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
+
+    # Add VSCode repo
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
+
+    # Update repositories and install
     sudo apt update
     sudo apt install -y code git
+
+    # Clean up
     rm -f microsoft.gpg
+
 else
-    echo "Neither dnf nor apt found. Unsupported system."
+    echo "❌ Neither dnf nor apt found. Unsupported system."
     exit 1
 fi
 
+# Git configuration (optional)
+echo "🔧 Configuring Git user settings..."
 git config --global user.name "Ricardo Gonzalez"
 git config --global user.email "ricardo@linux.local"
 git config --global push.autoSetupRemote true
 
 # Confirm installation
 if command -v code > /dev/null 2>&1; then
-    echo "Visual Studio Code has been successfully installed."
+    echo "✅ Visual Studio Code has been successfully installed."
 else
-    echo "There was an error installing Visual Studio Code."
+    echo "❌ There was an error installing Visual Studio Code."
+    exit 1
 fi

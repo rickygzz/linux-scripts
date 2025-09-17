@@ -1,18 +1,43 @@
 #!/bin/bash
 
-# Add Google Chrome repository
-sudo sh -c 'echo -e "[google-chrome]\nname=Google Chrome\nbaseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64\nenabled=1\ngpgcheck=1\ngpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub" > /etc/yum.repos.d/google-chrome.repo'
+set -e
 
-# Update package list
-sudo dnf check-update
+# Detect the package manager
+if command -v dnf >/dev/null 2>&1; then
+    echo "📦 DNF-based system detected (Fedora, RHEL, Rocky, CentOS)..."
 
-# Install Google Chrome
-sudo dnf install -y google-chrome-stable
+    # For DNF-based systems (Fedora, RHEL, Rocky, CentOS)
+    echo "🔄 Adding Google Chrome repository for DNF-based systems..."
+    sudo tee /etc/yum.repos.d/google-chrome.repo > /dev/null <<EOF
+[google-chrome]
+name=Google Chrome
+baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64
+enabled=1
+gpgcheck=1
+gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
+EOF
 
-# Confirm installation
-if command -v google-chrome > /dev/null 2>&1; then
-    echo "Google Chrome has been successfully installed."
+    echo "🔄 Installing Google Chrome using DNF..."
+    sudo dnf upgrade -y
+    sudo dnf install -y google-chrome-stable
+elif command -v apt >/dev/null 2>&1; then
+    echo "📦 APT-based system detected (Ubuntu, Debian)..."
+
+    echo "🔄 Adding Google Chrome repository for APT-based systems..."
+    wget -qO- https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/google-linux-signing-keyring.gpg > /dev/null
+    echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/google-linux-signing-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list > /dev/null
+
+    echo "🔄 Installing Google Chrome using APT..."
+    sudo apt update
+    sudo apt install -y google-chrome-stable
 else
-    echo "There was an error installing Google Chrome."
+    echo "❌ Neither dnf nor apt found. Unsupported system."
+    exit 1
 fi
 
+if command -v google-chrome > /dev/null 2>&1; then
+    echo "✅ Google Chrome has been successfully installed."
+else
+    echo "❌ There was an error installing Google Chrome."
+    exit 1
+fi
