@@ -2,20 +2,28 @@
 
 set -e
 
+echo "🔍 Detecting package manager..."
+
 if command -v dnf >/dev/null 2>&1; then
-    # Install required dependencies
+    echo "📦 DNF-based system detected (Fedora, RHEL, Rocky, CentOS)..."
+
+    echo "🔄 Updating the system with DNF and installing dependencies..."
     sudo dnf check-update
     sudo dnf install -y curl unzip
+
     # sudo dnf fonts-powerline
     curl -s https://ohmyposh.dev/install.sh | bash -s
 elif command -v apt >/dev/null 2>&1; then
-    # Install required dependencies
+    echo "📦 APT-based system detected (Ubuntu, Debian)..."
+
+    echo "🔄 Updating the system with APT and installing dependencies..."
     sudo apt update
     sudo apt install -y curl unzip
+    
     # Install oh-my-posh to /usr/local/bin so it's already in PATH
     sudo curl -s https://ohmyposh.dev/install.sh | sudo bash -s -- -d /usr/local/bin
 else
-    echo "Neither dnf nor apt found. Unsupported system."
+    echo "❌ Neither dnf nor apt found. Unsupported system."
     exit 1
 fi
 
@@ -26,19 +34,18 @@ oh-my-posh font install D2Coding
 cp rick.omp.json ~/rick.omp.json
 
 if [ -f ~/rick.omp.json ]; then
-    echo "File copied successfully to ~/rick.omp.json"
+    echo "✅ File copied successfully to ~/rick.omp.json"
 
     {
         # echo 'export PATH=$PATH:~/.local/bin'
         echo 'eval "$(oh-my-posh init bash --config ~/rick.omp.json)"'
     } >> ~/.bashrc
 else
-    echo "Failed to copy the file in ~/rick.omp.json."
-
+    echo "❌ Failed to copy the file in ~/rick.omp.json."
     exit 1
 fi
 
-# Reload .bashrc to apply changes
+echo "🔃 Reloading .bashrc to apply changes"
 source ~/.bashrc
 
-echo "Oh My Posh installation and configuration complete!"
+echo "✅ Oh My Posh installation and configuration complete!"

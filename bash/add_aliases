@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Append alias only if it does not already exist
+# Append alias only if it does not already exists
 alias_string='alias ll="ls -lsa"'
 grep -qxF "$alias_string" ~/.bashrc || echo "$alias_string" >> ~/.bashrc
 

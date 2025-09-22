@@ -9,8 +9,7 @@ if command -v dnf >/dev/null 2>&1; then
     echo "📦 DNF-based system detected (Fedora, RHEL, Rocky, CentOS)..."
 
     echo "🔄 Updating the system with DNF..."
-    sudo dnf check-update  # Check if there are updates
-    sudo dnf upgrade -y    # Perform the upgrade without asking
+    sudo dnf upgrade --refresh -y    # Perform the upgrade without asking
 elif command -v apt >/dev/null 2>&1; then
     echo "📦 APT-based system detected (Ubuntu, Debian)..."
     
