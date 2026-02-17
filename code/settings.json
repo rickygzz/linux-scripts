@@ -2,5 +2,15 @@
     "editor.fontFamily": "'D2CodingLigature Nerd Font Mono'",
     "editor.fontSize": 16,
     "terminal.integrated.fontFamily": "'D2CodingLigature Nerd Font Mono'",
-    "terminal.integrated.fontSize": 16
+    "terminal.integrated.fontSize": 16,
+    "editor.rulers": [
+        {
+            "column": 80,
+            "color": "#412c1e"
+        },
+        {
+            "column": 120,
+            "color": "#5f332b"
+        }
+    ]
 }

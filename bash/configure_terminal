@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FONT_FAMILY="D2Coding Nerd Font"
+FONT_SIZE_DEFAULT=12
+
+# -------- helpers --------
+have() { command -v "$1" >/dev/null 2>&1; }
+
+install_font_if_missing() {
+  if fc-list | grep -Fq "$FONT_FAMILY"; then
+    echo "✅ Font already installed: $FONT_FAMILY"
+    return
+  fi
+
+  echo "⬇️  Installing $FONT_FAMILY locally (~/.local/share/fonts)"
+  mkdir -p "$HOME/.local/share/fonts"
+  tmpzip="$(mktemp /tmp/D2CodingNerd.XXXXXX.zip)"
+
+  if have curl; then
+    curl -sSL -o "$tmpzip" https://github.com/ryanoasis/nerd-fonts/releases/latest/download/D2Coding.zip
+  elif have wget; then
+    wget -q -O "$tmpzip" https://github.com/ryanoasis/nerd-fonts/releases/latest/download/D2Coding.zip
+  else
+    echo "❌ Need curl or wget to download the font." >&2
+    exit 1
+  fi
+
+  ( cd "$HOME/.local/share/fonts" && unzip -o "$tmpzip" >/dev/null )
+  rm -f "$tmpzip"
+  fc-cache -f >/dev/null
+  echo "✅ Font installed: $FONT_FAMILY"
+}
+
+# Detect the terminal we're running in (best-effort)
+is_konsole_session() {
+  [[ -n "${KONSOLE_VERSION:-}" || -n "${KONSOLE_DBUS_SERVICE:-}" ]] && return 0
+  # fallback: check process tree for konsole
+  ps -o comm= -p "$(ps -o ppid= -p $$)" 2>/dev/null | grep -qi konsole && return 0 || true
+  pgrep -u "$USER" -x konsole >/dev/null 2>&1 && return 0 || true
+  return 1
+}
+
+is_gnome_terminal_session() {
+  [[ -n "${GNOME_TERMINAL_SERVICE:-}" || -n "${GNOME_TERMINAL_SCREEN:-}" ]] && return 0
+  # fallback: process check for gnome-terminal-server
+  pgrep -u "$USER" -x gnome-terminal-server >/dev/null 2>&1 && return 0 || true
+  # schema presence means we can configure it even if not current
+  gsettings list-schemas 2>/dev/null | grep -q 'org.gnome.Terminal.Legacy' && return 0 || true
+  return 1
+}
+
+# -------- Konsole --------
+set_konsole_font() {
+  local size="${1:-$FONT_SIZE_DEFAULT}"
+  local profiles_dir="$HOME/.local/share/konsole"
+  local konsolerc="$HOME/.config/konsolerc"
+
+  mkdir -p "$profiles_dir"
+
+  # Figure out default profile name (e.g., Shell.profile)
+  local default_profile="Shell.profile"
+  if [[ -f "$konsolerc" ]]; then
+    # Try to read DefaultProfile from konsolerc
+    local dp
+    dp=$(awk -F= '/^DefaultProfile=/{print $2}' "$konsolerc" | tail -n1 || true)
+    if [[ -n "${dp:-}" ]]; then
+      default_profile="$dp"
+    fi
+  fi
+
+  local profile_path="$profiles_dir/$default_profile"
+  if [[ ! -f "$profile_path" ]]; then
+    echo "⚙️  Creating Konsole profile: $default_profile"
+    cat >"$profile_path" <<EOF
+[Appearance]
+ColorScheme=SolarizedLight
+
+[General]
+Command=/bin/bash
+Name=Shell
+
+[Terminal Features]
+BlinkingCursorEnabled=true
+EOF
+  fi
+
+  echo "📝 Setting Konsole font to: $FONT_FAMILY, size $size"
+  # Remove any existing Font= line and append a new one
+  sed -i '/^Font=/d' "$profile_path" || true
+  # Konsole stores extra comma-separated fields after size; safe generic line:
+  echo "Font=${FONT_FAMILY},${size},-1,5,50,0,0,0,0,0" >> "$profile_path"
+
+  echo "🔁 Reloading Konsole profile (start a new tab/window to see effect)."
+}
+
+# -------- GNOME Terminal --------
+set_gnome_terminal_font() {
+  local size="${$FONT_SIZE_DEFAULT}"
+  local family_and_size="${FONT_FAMILY} ${size}"
+
+  if ! have gsettings; then
+    echo "❌ gsettings not found; cannot configure GNOME Terminal." >&2
+    return 1
+  fi
+
+  # Get default profile UUID
+  local def_uuid
+  def_uuid=$(gsettings get org.gnome.Terminal.Legacy.Settings default 2>/dev/null | tr -d \')
+  if [[ -z "${def_uuid:-}" ]]; then
+    echo "❌ Could not determine GNOME Terminal default profile UUID." >&2
+    return 1
+  fi
+
+  local base="org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${def_uuid}/"
+
+  echo "📝 Setting GNOME Terminal font to: $family_and_size"
+  gsettings set "$base" use-system-font false
+  gsettings set "$base" font "$family_and_size"
+}
+
+main() {
+  local size="${1:-$FONT_SIZE_DEFAULT}"
+
+  # install_font_if_missing
+
+  local did_any=0
+  if is_konsole_session; then
+    echo "📦 Detected Konsole session (or available)."
+    set_konsole_font "$size" && did_any=1
+  fi
+
+  if is_gnome_terminal_session; then
+    echo "📦 Detected GNOME Terminal session (or available)."
+    set_gnome_terminal_font "$size" && did_any=1
+  fi
+
+  if [[ "$did_any" -eq 0 ]]; then
+    echo "❌ Could not detect Konsole or GNOME Terminal to configure."
+    echo "   You can force one by running:"
+    echo "     # Konsole: set_konsole_font <size>"
+    echo "     # GNOME:   set_gnome_terminal_font <size>"
+    exit 1
+  fi
+
+  echo "✅ Done."
+}
+
+main
