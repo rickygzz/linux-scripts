@@ -74,20 +74,29 @@ set_konsole_font() {
     echo "⚙️  Creating Konsole profile: $default_profile"
     cat >"$profile_path" <<EOF
 [Appearance]
-ColorScheme=SolarizedLight
+ColorScheme=Campbell
+EmojiFont=Noto Emoji,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+Font=D2CodingLigature Nerd Font Mono,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+
+[Cursor Options]
+CursorShape=2
 
 [General]
 Command=/bin/bash
 Name=Shell
+Parent=FALLBACK/
 
 [Terminal Features]
 BlinkingCursorEnabled=true
+Font=D2Coding Nerd Font,12,-1,5,50,0,0,0,0,0
+LineNumbers=2
+VerticalLine=true
 EOF
   fi
 
   echo "📝 Setting Konsole font to: $FONT_FAMILY, size $size"
   # Remove any existing Font= line and append a new one
-  sed -i '/^Font=/d' "$profile_path" || true
+  # sed -i '/^Font=/d' "$profile_path" || true
   # Konsole stores extra comma-separated fields after size; safe generic line:
   echo "Font=${FONT_FAMILY},${size},-1,5,50,0,0,0,0,0" >> "$profile_path"
 
@@ -136,8 +145,8 @@ main() {
   fi
 
   if [[ "$did_any" -eq 0 ]]; then
-    echo "❌ Could not detect Konsole or GNOME Terminal to configure."
-    echo "   You can force one by running:"
+    echo "❌ Could not detect if the current terminal is Konsole or GNOME Terminal to configure."
+    echo "   Please open either one of these terminals. Or you can force one by running:"
     echo "     # Konsole: set_konsole_font <size>"
     echo "     # GNOME:   set_gnome_terminal_font <size>"
     exit 1
