@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if command -v dnf >/dev/null 2>&1; then
+	echo "📦 DNF-based system detected (Fedora, RHEL, Rocky, CentOS)..."
+
+	echo "🔄 Updating packages..."
+	sudo dnf upgrade -y
+
+	echo "🔄 Installing FileZilla using DNF..."
+	sudo dnf install -y filezilla
+elif command -v apt >/dev/null 2>&1 || command -v apt-get >/dev/null 2>&1; then
+	echo "📦 APT-based system detected (Ubuntu, Debian)..."
+
+	echo "🔄 Updating package index..."
+	sudo apt-get update
+
+	echo "🔄 Installing FileZilla using APT..."
+	sudo apt-get install -y filezilla
+else
+	echo "❌ Neither dnf nor apt found. Unsupported system."
+	exit 1
+fi
+
+if command -v filezilla >/dev/null 2>&1; then
+	echo "✅ FileZilla has been successfully installed."
+else
+	echo "❌ There was an error installing FileZilla."
+	exit 1
+fi
