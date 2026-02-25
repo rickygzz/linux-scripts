@@ -1,3 +1,6 @@
+# KDE Setup
+
+## Turn off screen setting
 
 1. Press Windows key.
 2. Type: `Power Management`

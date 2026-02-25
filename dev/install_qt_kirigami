@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if ! command -v dnf >/dev/null 2>&1; then
+  echo "This script currently supports Fedora/RHEL-based distros with dnf."
+  exit 1
+fi
+
+echo "Updating package index..."
+sudo dnf update -y
+
+required_packages=(
+  git
+  cmake
+  ninja-build
+  gcc-c++
+  gdb
+  qt-creator
+  qt6-qtbase-devel
+  qt6-qtdeclarative-devel
+  qt6-qttools-devel
+  qt6-qtwayland-devel
+  extra-cmake-modules
+  kf6-kirigami-devel
+  kf6-kcoreaddons-devel
+  kf6-ki18n-devel
+  kf6-kconfig-devel
+)
+
+optional_packages=(
+  clazy
+  ccache
+  kf6-kirigami-addons-devel
+)
+
+echo "Installing required Qt + Kirigami development packages..."
+sudo dnf install -y "${required_packages[@]}"
+
+# Install optional packages only if available in the current distro repositories.
+for package in "${optional_packages[@]}"; do
+  if dnf info "$package" >/dev/null 2>&1; then
+    sudo dnf install -y "$package"
+  else
+    echo "Skipping optional package not available in repos: $package"
+  fi
+done
+
+echo
+echo "Qt + Kirigami development environment is ready."
+echo "Validate versions/tools with:"
+echo "  qmake6 -v || true"
+echo "  cmake --version"
+echo "  qtcreator --version"
