@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ "$EUID" -eq 0 ]]; then
+    echo "Error: run this script as your regular user, without sudo. It uses sudo for system dependencies." >&2
+    exit 1
+fi
+
+echo "Installing Rust build and Linux tray dependencies..."
+if command -v apt-get >/dev/null 2>&1; then
+    sudo -A apt-get update
+    sudo -A apt-get install -y curl build-essential libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
+elif command -v dnf >/dev/null 2>&1; then
+    sudo -A dnf install -y curl gcc gtk3-devel libxdo-devel libayatana-appindicator-gtk3-devel
+elif command -v pacman >/dev/null 2>&1; then
+    sudo -A pacman -S --needed --noconfirm curl base-devel gtk3 xdotool libayatana-appindicator
+else
+    echo "Error: supported package manager not found (apt-get, dnf, or pacman)." >&2
+    exit 1
+fi
+
+installer="$(mktemp)"
+trap 'rm -f "$installer"' EXIT
+
+echo "Downloading the rustup installer..."
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o "$installer"
+
+echo "Installing Rust with rustup..."
+sh "$installer" -y
+
+cargo_bin="${CARGO_HOME:-$HOME/.cargo}/bin"
+export PATH="$cargo_bin:$PATH"
+
+rustc --version
+cargo --version
+
+echo "Rust is installed. Restart your shell or source \"${CARGO_HOME:-$HOME/.cargo}/env\" to update your PATH."
