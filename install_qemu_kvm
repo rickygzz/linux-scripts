@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -e
+
+if [ "$(id -u)" -eq 0 ]; then
+    if [ -z "${SUDO_USER:-}" ]; then
+        echo "Run this script as the user to be added to the libvirt group, not directly as root." >&2
+        exit 1
+    fi
+    target_user=$SUDO_USER
+else
+    target_user=$(id -un)
+fi
+
+echo "Notice: libvirt management access can be equivalent to root access."
+echo "This script will enable libvirtd and add $target_user to the libvirt group if it exists."
+
+if command -v dnf >/dev/null 2>&1; then
+    echo "Installing QEMU/KVM using DNF..."
+    sudo -A dnf install -y @virtualization qemu-kvm qemu-img virt-manager virt-viewer
+elif command -v apt-get >/dev/null 2>&1; then
+    echo "Installing QEMU/KVM using APT..."
+    sudo -A apt-get update
+    sudo -A apt-get install -y qemu-system qemu-utils libvirt-daemon-system libvirt-clients virt-manager virt-viewer
+else
+    echo "Neither dnf nor apt-get found. Unsupported system." >&2
+    exit 1
+fi
+
+sudo -A systemctl enable --now libvirtd
+
+if getent group libvirt >/dev/null; then
+    sudo -A usermod -aG libvirt "$target_user"
+    echo "Log out and back in for the libvirt group membership to take effect."
+else
+    echo "Warning: the libvirt group does not exist; no group membership was changed." >&2
+    echo "This system may use polkit to authorize libvirt access instead." >&2
+fi
+
+echo "QEMU/KVM and libvirt setup completed."
+if [ ! -e /dev/kvm ]; then
+    echo "Warning: /dev/kvm is unavailable; hardware acceleration may require virtualization support and KVM kernel modules." >&2
+fi
